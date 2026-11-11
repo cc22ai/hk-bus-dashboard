@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>四條路線｜巴士到站 Dashboard</title>
+<style>
+:root{
+  --bg:#f5f7fa; --surface:#fff; --line:#e5eaf1; --ink:#152033; --ink2:#5a6b82; --ink3:#93a0b2;
+  --kmb:#c0392b; --ctb:#d58015; --blue:#1f5fd0; --ok:#16825a; --soon:#dd7712; --urgent:#d92d20;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 5px 16px rgba(16,24,40,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang HK","PingFang TC","Noto Sans CJK TC","Microsoft JhengHei",system-ui,sans-serif}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font-family:inherit;cursor:pointer}
+
+/* header */
+.top{background:#111e33;color:#fff;padding:16px 0;border-bottom:3px solid #2b4064}
+.top .in{max-width:1120px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand h1{margin:0;font-size:19px;font-weight:680;letter-spacing:.3px}
+.brand p{margin:3px 0 0;color:#9db0cb;font-size:11.5px}
+.right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.clock{font-variant-numeric:tabular-nums;font-size:21px;font-weight:650;letter-spacing:1px}
+.clock small{display:block;font-size:10px;color:#9db0cb;font-weight:400;letter-spacing:0;text-align:right}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#c3d0e2;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);padding:6px 10px;border-radius:20px}
+.dot{width:7px;height:7px;border-radius:50%;background:#35c07a;box-shadow:0 0 0 3px rgba(53,192,122,.16)}
+.dot.err{background:#f0664d;box-shadow:0 0 0 3px rgba(240,102,77,.16)}
+.btn{background:#fff;color:#16263d;border:1px solid #d7e0eb;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:650}
+.btn:hover{background:#eaf1fa}
+
+main{max-width:1120px;margin:0 auto;padding:24px 20px 44px}
+.route{background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+.rhead{display:flex;align-items:center;gap:14px;padding:15px 18px;border-bottom:1px solid var(--line);background:#fbfcfe}
+.idx{font-variant-numeric:tabular-nums;font-size:12px;font-weight:750;color:#fff;background:#253c5f;min-width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+.rhead h2{margin:0;font-size:17px;font-weight:700;letter-spacing:.3px}
+.rhead p{margin:2px 0 0;color:var(--ink2);font-size:12px}
+.rhead .tag{margin-left:auto;font-size:11px;font-weight:700;color:#fff;padding:5px 10px;border-radius:6px;white-space:nowrap}
+.tag.kmb{background:var(--kmb)} .tag.ctb{background:var(--ctb)}
+.rbody{padding:16px 18px}
+
+/* ETA boards */
+.buses{display:flex;gap:10px;flex-wrap:wrap}
+.bus{flex:1 1 150px;min-width:140px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#fbfcfe;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.bus .n{font-variant-numeric:tabular-nums;font-size:32px;font-weight:750;line-height:1;color:var(--ok)}
+.bus .n.soon{color:var(--soon)} .bus .n.urgent{color:var(--urgent)}
+.bus .u{font-size:11px;color:var(--ink3)}
+.bus .t{margin-left:auto;font-variant-numeric:tabular-nums;font-size:14px;font-weight:650;color:var(--ink2)}
+.bus .rm{font-size:10.5px;color:var(--ink3);display:block;width:100%;margin-top:5px}
+.bus.first{background:#f2f8f4;border-color:#cfe8d9}
+.nodata{padding:18px 2px;color:var(--ink3);font-size:12.5px}
+.nodata b{display:block;color:var(--ink2);font-size:13.5px;margin-bottom:3px;font-weight:650}
+.nodata small{display:block;margin-top:5px;font-size:11px}
+.meta{margin-top:12px;font-size:11.5px;color:var(--ink3);line-height:1.7}
+.meta b{color:var(--ink2)}
+
+/* route 2: two stops, one route */
+.stops{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.stops{grid-template-columns:1fr}}
+.stopbox{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stopbox h3{margin:0;padding:10px 14px;background:#f7f9fc;border-bottom:1px solid var(--line);font-size:13px;font-weight:680;display:flex;align-items:center;gap:8px}
+.stopbox h3 span{font-size:10.5px;color:#fff;background:#3a587f;border-radius:4px;padding:2px 6px;font-weight:600}
+.stopbox h3 em{margin-left:auto;font-style:normal;font-size:10.5px;color:var(--ink3);font-weight:400}
+.stopbox .inner{padding:12px 14px}
+.stopbox .buses .bus{flex:1 1 100px;min-width:0;padding:10px 11px}
+.stopbox .bus .n{font-size:26px}
+.stopbox .bus .t{font-size:12.5px}
+.vline{height:1px;background:var(--line);margin:14px 0 0}
+
+/* route 3 */
+.lunch-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:650}
+.tab.on{background:#243d61;color:#fff;border-color:#243d61}
+.group{font-size:11.5px;font-weight:700;color:var(--ink2);background:#eef3fa;border-left:3px solid #3a6bb0;padding:7px 11px;margin:14px 0 6px;border-radius:0 6px 6px 0}
+.group:first-of-type{margin-top:0}
+.group em{font-style:normal;font-weight:400;color:var(--ink3);margin-left:6px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{background:#f7f9fc;color:var(--ink2);font-size:10.5px;font-weight:700;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;letter-spacing:.3px}
+tbody td{padding:11px 10px;border-bottom:1px solid #eef2f7;vertical-align:top;color:var(--ink2)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.dim{background:#fcfdfe}
+.rnum{font-size:16px;font-weight:750;color:var(--ink);white-space:nowrap}
+.rnum span{display:block;font-size:10px;font-weight:500;color:var(--ink3);margin-top:1px}
+.board-cell{min-width:150px}
+.brow{display:flex;align-items:baseline;gap:6px;margin-bottom:5px}
+.brow:last-child{margin-bottom:0}
+.e{display:inline-flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+.e i{font-style:normal;font-size:10px;font-weight:700;color:#fff;background:#5a7397;border-radius:4px;padding:1px 5px;min-width:20px;text-align:center}
+.e i.p{background:#7a63a8}
+.e b{font-size:15px;font-weight:730;color:var(--ok)}
+.e b.soon{color:var(--soon)} .e b.urgent{color:var(--urgent)}
+.e small{font-size:11px;color:var(--ink3)}
+.e.na b,.e.na small{color:var(--ink3);font-weight:500;font-size:11.5px}
+.alight{color:var(--ink);font-weight:650;font-size:12px}
+.alight small{display:block;font-weight:400;color:var(--ink3);font-size:10.5px;margin-top:3px}
+.alight em{font-style:normal;color:var(--blue);font-weight:650;font-variant-numeric:tabular-nums}
+.via{font-size:11px;line-height:1.65;color:var(--ink3);min-width:230px}
+.via b{color:var(--ink);font-weight:650}
+.via .org{color:var(--ink2);font-weight:600}
+.fare{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);white-space:nowrap}
+.fare small{display:block;font-weight:400;color:var(--ink3);font-size:10.5px;margin-top:3px;line-height:1.5}
+.foot{font-size:11px;color:var(--ink3);line-height:1.75;margin-top:13px;padding-top:12px;border-top:1px dashed var(--line)}
+.foot b{color:var(--ink2)}
+
+/* timetable details */
+details{margin-top:13px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-size:11.5px;color:var(--blue);font-weight:650;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary:before{content:'▸ ';display:inline-block}
+details[open] summary:before{content:'▾ '}
+.tt-inner{padding-top:12px}
+.tt-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+@media(max-width:760px){.tt-grid{grid-template-columns:1fr}}
+.tt-col h4{margin:0 0 6px;font-size:12.5px}
+.win{display:flex;gap:10px;font-size:11.5px;padding:3px 0;border-bottom:1px solid #f1f4f8}
+.win b{font-variant-numeric:tabular-nums;min-width:90px;color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:9px}
+.chip{font-variant-numeric:tabular-nums;font-size:10.5px;background:#eef3fb;color:#25416b;border-radius:4px;padding:2px 6px;font-weight:600}
+.chip.past{background:#f2f4f7;color:#aab3c0;text-decoration:line-through}
+
+footer{max-width:1120px;margin:0 auto;padding:0 20px 40px;color:var(--ink3);font-size:11px;line-height:1.8}
+footer b{color:var(--ink2)}
+.spin{display:inline-block;width:9px;height:9px;border:2px solid #cbd5e1;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:4px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="in">
+    <div class="brand">
+      <h1>四條路線・巴士到站 Dashboard</h1>
+      <p>返工／返屋企／Lunch 去潮州人／去堅尼地城卑路乍街　・　實時 ETA 每 30 秒自動更新</p>
+    </div>
+    <div class="right">
+      <div class="clock"><span id="hkclock">--:--:--</span><small>香港時間 HKT</small></div>
+      <div class="live"><span class="dot" id="livedot"></span><span id="livetext">準備連線…</span></div>
+      <button class="btn" id="refreshBtn">↻ 更新</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- 路線一 -->
+  <section class="route">
+    <div class="rhead">
+      <span class="idx">01</span>
+      <div><h2>返工</h2><p>灣景花園總站 → 灣仔（菲林明道）</p></div>
+      <span class="tag kmb">九巴 934</span>
+    </div>
+    <div class="rbody">
+      <div id="r1buses"></div>
+      <div class="meta" id="r1meta"></div>
+      <details id="ttDetails">
+        <summary>934 完整開出時間表（平日／週六／週日）</summary>
+        <div class="tt-inner">
+          <div class="lunch-tabs" id="dayTabs">
+            <button class="tab" data-day="wd">星期一至五</button>
+            <button class="tab" data-day="sat">星期六</button>
+            <button class="tab" data-day="sun">星期日及公眾假期</button>
+          </div>
+          <div class="tt-grid">
+            <div class="tt-col"><h4>灣景花園總站開出 → 灣仔</h4><div id="ttOut"></div></div>
+            <div class="tt-col"><h4>灣仔開出 → 灣景花園</h4><div id="ttIn"></div></div>
+          </div>
+          <div class="meta">時間表取自運輸署 GTFS 班次間距推算，僅供參考；滙豐總行／上環站屬中途站，約為灣仔開出後 10–15 分鐘，請以即時 ETA 為準。</div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- 路線二 -->
+  <section class="route">
+    <div class="rhead">
+      <span class="idx">02</span>
+      <div><h2>返屋企</h2><p>滙豐總行 ／ 上環站 → 灣景花園　（同一條 934，兩個站）</p></div>
+      <span class="tag kmb">九巴 934</span>
+    </div>
+    <div class="rbody">
+      <div class="stops">
+        <div class="stopbox">
+          <h3><span>站 ①</span>滙豐總行，德輔道中<em>往灣景花園・第 5 站</em></h3>
+          <div class="inner"><div id="r2hsbc"></div></div>
+        </div>
+        <div class="stopbox">
+          <h3><span>站 ②</span>上環站，德輔道中<em>往灣景花園・第 6 站</em></h3>
+          <div class="inner"><div id="r2sw"></div></div>
+        </div>
+      </div>
+      <div class="vline"></div>
+      <div class="meta" id="r2meta"></div>
+    </div>
+  </section>
+
+  <!-- 路線三 -->
+  <section class="route">
+    <div class="rhead">
+      <span class="idx">03</span>
+      <div><h2>Lunch 去潮州人</h2><p>皇后像廣場 ／ 砵典乍街 → 西營盤正街（潮州人粉麵店）</p></div>
+      <span class="tag ctb">城巴</span>
+    </div>
+    <div class="rbody">
+      <div class="lunch-tabs" id="scopeTabs">
+        <button class="tab on" data-scope="all">兩個站都睇</button>
+        <button class="tab" data-scope="statue">只睇皇后像廣場</button>
+        <button class="tab" data-scope="pottinger">只睇砵典乍街</button>
+      </div>
+      <div id="lunchTables"></div>
+      <div class="foot" id="lunchFoot"></div>
+    </div>
+  </section>
+
+  <!-- 路線四 -->
+  <section class="route">
+    <div class="rhead">
+      <span class="idx">04</span>
+      <div><h2>去堅尼地城・卑路乍街</h2><p>皇后像廣場 ／ 砵典乍街 → Belcher Street, Kennedy Town　（單一巴士直達・不轉車・單程車費）</p></div>
+      <span class="tag ctb">城巴</span>
+    </div>
+    <div class="rbody">
+      <div class="lunch-tabs" id="scopeTabsB">
+        <button class="tab on" data-scope="all">兩個站都睇</button>
+        <button class="tab" data-scope="statue">只睇皇后像廣場</button>
+        <button class="tab" data-scope="pottinger">只睇砵典乍街</button>
+      </div>
+      <div id="belcherTables"></div>
+      <div class="foot" id="belcherFoot"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <b>資料來源：</b>
+  <a href="https://data.gov.hk/en-data/dataset/hk-td-tis_21-etakmb/resource/75364cea-abff-4e85-b0d2-38a21ad8c8a8" target="_blank" rel="noopener">DATA.GOV.HK 九巴實時抵站時間</a>・
+  <a href="https://data.gov.hk/en-data/dataset/ctb-eta-transport-realtime-eta" target="_blank" rel="noopener">城巴實時抵站時間</a>・
+  <a href="https://data.gov.hk/tc-data/dataset/hk-td-tis_11-pt-headway-en" target="_blank" rel="noopener">運輸署公共交通服務班次資料 GTFS（2026-11-10 版）</a>。<br>
+  站點 ID：灣景花園總站 <code>88F78BDD9BDD7636</code>／滙豐總行 <code>B471F4B9E9CB6DB7</code>／上環站 <code>7397A6CBBD749279</code>／皇后像廣場 <code>001033</code>／砵典乍街 <code>001034</code>／正街皇后大道西 <code>001130</code>／高樂花園 <code>001191</code>／北街卑路乍街 <code>001004</code>／山市街卑路乍街 <code>001003</code>／聯邦新樓卑路乍街 <code>001005</code>。時間統一 HKT；班次、收費及臨時改道以營辦商公布為準。
+</footer>
+
+<script>
+/* ===================== 靜態設定（已核對官方 API／GTFS） ===================== */
+const KMB = 'https://data.etabus.gov.hk/v1/transport/kmb/eta/';
+const CTB = 'https://rt.data.gov.hk/v2/transport/citybus/eta/CTB/';
+const STOPS = {
+  bayview:'88F78BDD9BDD7636', hsbc:'B471F4B9E9CB6DB7', sheungwan:'7397A6CBBD749279',
+  statue:'001033', pottinger:'001034'
+};
+const ST_LABEL = {statue:'皇', pottinger:'砵'};
+const ST_NAME  = {statue:'皇后像廣場', pottinger:'砵典乍街'};
+
+/* 934 班次時段 [開始, 結束, 間距分鐘] */
+const TT934 = {
+  wd:{
+    out:[['06:30','06:50',20],['06:50','07:05',15],['07:05','07:25',10],['07:25','07:49',6],['07:49','08:29',8],['08:29','09:05',12],['09:05','09:20',15],['09:20','10:00',20],['10:00','13:00',30]],
+    in: [['16:00','17:00',30],['17:00','17:20',20],['17:20','17:50',15],['17:50','18:50',12],['18:50','19:30',20],['19:30','23:00',30]]
+  },
+  sat:{
+    out:[['07:25','08:05',20],['08:05','08:50',15],['08:50','10:30',20],['10:30','13:00',30]],
+    in: [['12:50','13:15',25],['16:00','18:05',25],['18:05','19:05',20],['19:05','19:30',25],['19:30','23:00',30]]
+  },
+  sun:{
+    out:[['09:00','10:00',30],['10:00','13:00',20]],
+    in: [['16:00','20:00',20],['20:00','23:00',30]]
+  }
+};
+
+/* 路線三：由兩個站去西營盤正街（潮州人）嘅直達路線
+   board = 可上車站；via = 由上車站起至落車站嘅途經站；alight = 落車站 ID */
+const LUNCH = [
+  {route:'4', dir:'I', group:'near', board:['pottinger'], alight:'001130',
+   via:['港澳碼頭','中環（林士街）','恒生銀行總行','中環中心','荷李活華庭','上環文娛中心','帝后華庭','修打蘭街'],
+   fare:'$7.1', svc:'全日約 20 分一班', etaNote:'此站無 ETA・見落車站時間'},
+  {route:'4X', dir:'I', group:'near', board:['pottinger'], alight:'001130',
+   via:['高樂花園','恒生銀行總行','中環中心','荷李活華庭','上環文娛中心','帝后華庭','修打蘭街'],
+   fare:'$7.1', svc:'一至六 07:00–20:35'},
+  {route:'18', dir:'O', group:'far', board:['statue','pottinger'], alight:'001191',
+   via:['砵典乍街','租庇利街','永和街','永安中心'],
+   fare:'$6.3', svc:'每日 05:30–24:00'},
+  {route:'18X', dir:'O', group:'far', board:['statue','pottinger'], alight:'001191',
+   via:['砵典乍街'],
+   fare:'$6.3', svc:'每日 07:00–19:40（特快）'},
+  {route:'18P', dir:'I', group:'far', board:['statue','pottinger'], alight:'001191',
+   via:['砵典乍街'],
+   fare:'$6.3', svc:'一至五 05:30–08:52'},
+  {route:'88X', dir:'O', group:'far', board:['pottinger'], alight:'001191',
+   via:[],
+   fare:'$6.3', svc:'平日 約 30 分一班', etaNote:'官方 ETA 未覆蓋'},
+  {route:'101X', dir:'I', group:'far', board:['statue'], alight:'001191',
+   via:[],
+   fare:'$14.4', svc:'一至五 07:15、07:45、17:55、18:15'},
+  {route:'930A', dir:'I', group:'far', board:['pottinger'], alight:'001191',
+   via:[],
+   fare:'$20.8', svc:'一至五 17:45、18:05'}
+];
+const ALIGHT_NAME = {near:'正街，皇后大道西', far:'高樂花園，干諾道西'};
+const ALIGHT_WALK = {near:'落車行 1–2 分鐘', far:'落車行 3–5 分鐘'};
+
+/* 路線四：由兩個站直達堅尼地城卑路乍街（Belcher Street）嘅路線
+   via 用 {statue:[], pottinger:[]} 按上車站分別列出至落車站嘅途經站 */
+const BELCHER = [
+  {route:'18', dir:'O', group:'north', board:['statue','pottinger'], alight:'001004',
+   alightName:'北街，卑路乍街', walk:'Belcher St 西段・近西寶城',
+   via:{statue:['砵典乍街','租庇利街','永和街','永安中心','高樂花園','山道，德輔道西','堅尼地城游泳池','山市街，堅彌地城海旁'],
+        pottinger:['租庇利街','永和街','永安中心','高樂花園','山道，德輔道西','堅尼地城游泳池','山市街，堅彌地城海旁']},
+   fare:'$6.3', svc:'每日 05:30–24:00'},
+  {route:'18X', dir:'O', group:'north', board:['statue','pottinger'], alight:'001004',
+   alightName:'北街，卑路乍街', walk:'Belcher St 西段・近西寶城',
+   via:{statue:['砵典乍街','高樂花園','山道，德輔道西','堅尼地城游泳池','山市街，堅彌地城海旁'],
+        pottinger:['高樂花園','山道，德輔道西','堅尼地城游泳池','山市街，堅彌地城海旁']},
+   fare:'$6.3', svc:'每日 07:00–19:40（特快）'},
+  {route:'18P', dir:'I', group:'north', board:['statue','pottinger'], alight:'001004',
+   alightName:'北街，卑路乍街', walk:'Belcher St 西段・近西寶城',
+   via:{statue:['砵典乍街','高樂花園','山道，德輔道西','堅尼地城游泳池','山市街，堅彌地城海旁'],
+        pottinger:['高樂花園','山道，德輔道西','堅尼地城游泳池','山市街，堅彌地城海旁']},
+   fare:'$6.3', svc:'一至五 05:30–08:52'},
+  {route:'347', dir:'O', group:'north', board:['statue','pottinger'], alight:'001004',
+   alightName:'北街，卑路乍街', walk:'節日特別線',
+   via:{statue:['中環（交易廣場）','砵典乍街'], pottinger:[]},
+   fare:'$11.5', svc:'清明／重陽指定日子', etaNote:'節日特別線・無常規 ETA'},
+  {route:'5X', dir:'I', group:'east', board:['pottinger'], alight:'001003',
+   alightName:'山市街，卑路乍街', walk:'Belcher St 東段',
+   via:{statue:[], pottinger:['西祥街']},
+   fare:'$6.1', svc:'每日 06:20–19:20（約 30 分）'},
+  {route:'88X', dir:'O', group:'east', board:['pottinger'], alight:'001005',
+   alightName:'聯邦新樓，卑路乍街', walk:'Belcher St 東段',
+   via:{statue:[], pottinger:['高樂花園','山道，德輔道西','堅尼地城游泳池','山市街，堅彌地城海旁']},
+   fare:'$6.3', svc:'平日 約 30 分一班', etaNote:'官方 ETA 未覆蓋'},
+  {route:'101X', dir:'I', group:'east', board:['statue'], alight:'001003',
+   alightName:'山市街，卑路乍街', walk:'Belcher St 東段',
+   via:{statue:['高樂花園','朝光街，皇后大道西','石塘咀市政大廈','日富里'], pottinger:[]},
+   fare:'$14.4', svc:'一至五 07:15、07:45、17:55、18:15'}
+];
+
+/* ===================== 工具 ===================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function hkNow(){ return new Date(Date.now() + (new Date().getTimezoneOffset()+480)*60000); }
+function hkClock(){ return new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Hong_Kong',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date()); }
+function hkDay(){ const d=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Hong_Kong',weekday:'short'}).format(new Date()); return d==='Sat'?'sat':(d==='Sun'?'sun':'wd'); }
+function hhmm(iso){ return iso ? iso.slice(11,16) : '--:--'; }
+function minsTo(iso){ return iso ? Math.max(0,Math.round((new Date(iso).getTime()-Date.now())/60000)) : null; }
+function urg(m){ return m===null?'':(m<=2?'urgent':(m<=8?'soon':'')); }
+function toMin(s){ const [h,m]=s.split(':').map(Number); return h*60+m; }
+function toHH(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+function expand(wins){ const out=[]; wins.forEach(([s,e,h])=>{for(let t=toMin(s);t<=toMin(e);t+=h) out.push(t);}); return [...new Set(out)].sort((a,b)=>a-b); }
+function nextBus(wins){ const n=hkNow(), cur=n.getHours()*60+n.getMinutes(); const x=expand(wins).find(t=>t>=cur); return x===undefined?null:toHH(x); }
+async function fetchJSON(url,timeout=12000){
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),timeout);
+  try{ const r=await fetch(url,{signal:c.signal,cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); }
+  finally{ clearTimeout(t); }
+}
+
+/* ===================== ETA ===================== */
+const E = {};   // key -> {rows:[{eta,dest,rmk}], ts, ok, fail}
+async function loadEta(key, url, dir){
+  try{
+    const j = await fetchJSON(url);
+    const arr = (j && j.data) ? j.data : [];
+    const rows = arr.filter(x=>!dir || x.dir===dir).map(x=>({
+      eta:x.eta||null, dest:x.dest_tc||'', rmk:(x.rmk_tc||x.rmk_en||'').trim(),
+      ts:x.data_timestamp||(j&&j.generated_timestamp)||''
+    }));
+    rows.sort((a,b)=> (a.eta?new Date(a.eta).getTime():9e15) - (b.eta?new Date(b.eta).getTime():9e15));
+    E[key] = {rows, ok:true, ts:rows.length?rows[0].ts:''};
+  }catch(e){ E[key] = {rows:[], ok:false, fail:true}; }
+}
+function kmbUrl(stop){ return KMB+stop+'/934/1'; }
+function ctbUrl(stop,route){ return CTB+stop+'/'+route; }
+
+/* 3 班大字板 */
+function board(key, opts){
+  const d = E[key];
+  opts = opts || {};
+  if(!d) return '<div class="nodata"><span class="spin"></span>讀取緊即時到站資料…</div>';
+  if(d.fail) return '<div class="nodata"><b>即時資料暫時無法讀取</b><small>按右上角「↻ 更新」重試</small></div>';
+  const valid = d.rows.filter(x=>x.eta).slice(0, opts.limit||3);
+  if(!valid.length){
+    const rmk = d.rows.filter(x=>!x.eta&&x.rmk).map(x=>x.rmk)[0] || '本時段沒有班次';
+    let extra = '';
+    if(opts.next){
+      const nb = nextBus(TT934[curDay][opts.next]);
+      const label = opts.next==='out' ? '灣景花園總站' : '灣仔（菲林明道）';
+      const tail = opts.next==='in' ? '（滙豐總行／上環站約 +10–15 分鐘）' : '';
+      extra = nb
+        ? `<small>按時間表：下一次 ${label} 開出 <b>${nb}</b> ${tail}</small>`
+        : `<small>按時間表：今日 ${label} 班次已完結；${opts.next==='out'?'平日 06:30 起':'平日 16:00 起'}再有車</small>`;
+    }
+    return `<div class="nodata"><b>${esc(rmk)}</b>${extra || '<small>934 屬指定時段路線，非服務時段無即時班次</small>'}</div>`;
+  }
+  return '<div class="buses">' + valid.map((x,i)=>{
+    const m=minsTo(x.eta);
+    return `<div class="bus ${i===0?'first':''}" data-eta="${esc(x.eta)}">
+      <span class="n ${urg(m)}">${m===null?'—':m}</span><span class="u">分鐘</span>
+      <span class="t">${hhmm(x.eta)}</span>
+      <span class="rm">${i===0?'下一班':''} ${esc(x.dest?('往 '+x.dest):(x.rmk||'預計抵站'))}</span>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+/* ===================== 路線三渲染 ===================== */
+let scope = 'all';
+function etaFor(key, fallbackSvc, naLabel){
+  const d = E[key];
+  if(!d) return '<span class="e na"><b>讀取中…</b></span>';
+  if(d.fail) return '<span class="e na"><b>連線失敗</b></span>';
+  const v = d.rows.filter(x=>x.eta)[0];
+  if(!v){
+    const rmk = d.rows.filter(x=>!x.eta&&x.rmk).map(x=>x.rmk)[0];
+    return `<span class="e na"><b>${esc(naLabel||rmk||'現時無班次')}</b><small>${esc(fallbackSvc)}</small></span>`;
+  }
+  const m=minsTo(v.eta);
+  return `<span class="e" data-eta="${esc(v.eta)}"><b class="${urg(m)}">${m===null?'—':m} 分</b><small>${hhmm(v.eta)}</small></span>`;
+}
+function alightHtml(r, key){
+  const d = E[key];
+  if(!d || d.fail) return '';
+  const v = d.rows.filter(x=>x.eta)[0];
+  return v ? `<small>落車站實時 <em>${hhmm(v.eta)}</em>（另一班）</small>` : '';
+}
+/* 通用列渲染：路線三、四共用 */
+function renderRows(rows, prefix){
+  return rows.map(r=>{
+    const boards = r.board.filter(s=>scope==='all'||s===scope).map(s=>
+      `<div class="brow"><i class="${s==='pottinger'?'p':''}">${ST_LABEL[s]}</i>${etaFor('board-'+r.route+'-'+s, r.svc, r.etaNote)}</div>`
+    ).join('');
+    const orgStop = r.board.filter(s=>scope==='all'||s===scope)[0];
+    const org = ST_NAME[orgStop];
+    const alightName = r.alightName || ALIGHT_NAME[r.group];
+    const walk = r.walk || ALIGHT_WALK[r.group];
+    let viaStops;
+    if(Array.isArray(r.via)){
+      viaStops = r.via.slice();
+      if(orgStop==='pottinger' && viaStops[0]==='砵典乍街') viaStops = viaStops.slice(1);
+    } else {
+      viaStops = (r.via[orgStop] || []).slice();
+    }
+    const via = viaStops.length
+      ? `<span class="org">${esc(org)}</span> › ${viaStops.map(esc).join(' › ')} › <b>${esc(alightName)}</b>`
+      : `<span class="org">${esc(org)}</span> › <b>${esc(alightName)}</b>（中途不停站）`;
+    return `<tr>
+      <td><span class="rnum">${esc(r.route)}</span></td>
+      <td class="board-cell">${boards}</td>
+      <td><span class="alight">${esc(alightName)}<small>${esc(walk)}</small>${alightHtml(r, 'alight-'+prefix+'-'+r.route)}</span></td>
+      <td class="via">${via}${r.note?`<br><span style="color:#b57a1c">※ ${esc(r.note)}</span>`:''}</td>
+      <td><span class="fare">${esc(r.fare)}<small>${esc(r.svc)}</small></span></td>
+    </tr>`;
+  }).join('');
+}
+function tableHtml(rows, g, prefix){
+  if(!rows.length) return '';
+  return `<div class="group">${g.title}<em>${g.hint}</em></div>
+    <table><thead><tr>
+      <th style="width:52px">路線</th><th style="width:160px">上車站到站時間</th>
+      <th style="width:160px">落車站</th><th>途經站（至落車站）</th><th style="width:120px">單程車費</th>
+    </tr></thead><tbody>${renderRows(rows, prefix)}</tbody></table>`;
+}
+function renderLunch(){
+  const groups = [
+    {k:'near', title:'最近落車｜正街，皇后大道西', hint:'落車行 1–2 分鐘就到潮州人粉麵店'},
+    {k:'far',  title:'次近落車｜高樂花園，干諾道西', hint:'落車沿正街行 3–5 分鐘'}
+  ];
+  $('#lunchTables').innerHTML = groups.map(g =>
+    tableHtml(LUNCH.filter(r=>r.group===g.k && (scope==='all'||r.board.includes(scope))), g, 'L')
+  ).join('');
+  $('#lunchFoot').innerHTML =
+    `<b>上車站代號：</b><b style="color:#5a7397">皇</b> ＝ 皇后像廣場，干諾道中（001033）　<b style="color:#7a63a8">砵</b> ＝ 砵典乍街，干諾道中（001034）。<br>`+
+    `<b>兩組時間點：</b>「上車站到站時間」係你等車嗰個站嘅實時 ETA；「落車站實時」係落車站下一班車嘅 ETA，屬另一班車，只作參考。<br>`+
+    `<b>已排除：</b>同站開出但唔經西營盤嘅 5X（直去堅尼地城）、347（節日特別線）、NA12（深宵機場線），以及 952／962／967／A11／E11 等直入西隧嘅路線；去堅尼地城請睇第 ④ 部分。`;
+}
+function renderBelcher(){
+  const groups = [
+    {k:'north', title:'卑路乍街西段｜北街，卑路乍街', hint:'近西寶城／卑路乍灣；18 系可再坐多兩個站到卑路乍灣總站'},
+    {k:'east',  title:'卑路乍街東段｜山市街／聯邦新樓', hint:'5X、88X、101X 嘅落車點'}
+  ];
+  $('#belcherTables').innerHTML = groups.map(g =>
+    tableHtml(BELCHER.filter(r=>r.group===g.k && (scope==='all'||r.board.includes(scope))), g, 'B')
+  ).join('');
+  $('#belcherFoot').innerHTML =
+    `<b>For single：</b>以下全部係<b>一架巴士直達、唔使轉車</b>，車費係由中環上車嘅<b>單程成人票價</b>（18／18P／18X／88X $6.3、5X $6.1、101X $14.4 過海線收全程、347 $11.5 全程）。<br>`+
+    `<b>卑路乍街（Belcher Street）落車點：</b>北街 <code>001004</code>（西段）／山市街 <code>001003</code>、聯邦新樓 <code>001005</code>（東段）；18 系終點卑路乍灣總站 <code>001177</code> 亦喺卑路乍街尾。<br>`+
+    `<b>已排除：</b>4／4X（只到西營盤）、930A／NA12（經西環後直入西隧）、952／962／967／A11／E11（唔經堅尼地城）。347 只於清明／重陽指定日子行走，無常規 ETA。`;
+}
+
+/* ===================== 934 時間表 ===================== */
+let curDay = hkDay();
+function renderTimetable(){
+  document.querySelectorAll('#dayTabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.day===curDay));
+  const n=hkNow(), nowMin=n.getHours()*60+n.getMinutes();
+  const build=(wins,el)=>{
+    const w=wins.map(x=>`<div class="win"><b>${x[0]}–${x[1]}</b><span>每 ${x[2]} 分鐘一班</span></div>`).join('');
+    const c=expand(wins).map(t=>`<span class="chip ${t<nowMin?'past':''}">${toHH(t)}</span>`).join('');
+    $(el).innerHTML = w + `<div class="chips">${c}</div>`;
+  };
+  build(TT934[curDay].out,'#ttOut');
+  build(TT934[curDay].in,'#ttIn');
+}
+document.querySelectorAll('#dayTabs .tab').forEach(b=>b.addEventListener('click',()=>{curDay=b.dataset.day;renderTimetable();}));
+
+/* ===================== 主流程 ===================== */
+function render(){
+  $('#r1buses').innerHTML = board('r1',{next:'out'});
+  $('#r2hsbc').innerHTML  = board('r2hsbc',{next:'in',limit:3});
+  $('#r2sw').innerHTML    = board('r2sw',{next:'in',limit:3});
+  const d=TT934[curDay];
+  $('#r1meta').innerHTML = `<b>服務時段（${curDay==='wd'?'平日':curDay==='sat'?'週六':'週日'}）：</b>灣景花園總站開出 ${d.out[0][0]}–${d.out[d.out.length-1][1]}，繁忙時間約 6–12 分一班。934 屬指定時段路線，下午無往港島方向班次。`;
+  $('#r2meta').innerHTML = `<b>服務時段：</b>灣仔（菲林明道）開出 ${d.in[0][0]}–${d.in[d.in.length-1][1]}，繁忙時間約 12–20 分一班。兩站只相隔一個站，上環站通常比滙豐總行遲約 2 分鐘，睇邊個站就腳就上邊個。`;
+  renderLunch();
+  renderBelcher();
+}
+let loading=false;
+async function refresh(){
+  if(loading) return;
+  loading=true;
+  $('#refreshBtn').textContent='⟳ 更新中';
+  $('#livedot').className='dot';
+  $('#livetext').textContent='正在更新…';
+  render();
+  const jobs=[
+    loadEta('r1', kmbUrl(STOPS.bayview), 'O'),
+    loadEta('r2hsbc', kmbUrl(STOPS.hsbc), 'I'),
+    loadEta('r2sw', kmbUrl(STOPS.sheungwan), 'I')
+  ];
+  const seen = new Set();
+  const add = (key, url, dir) => { if(!seen.has(key)){ seen.add(key); jobs.push(loadEta(key, url, dir)); } };
+  [['L',LUNCH],['B',BELCHER]].forEach(([prefix,list])=>{
+    list.forEach(r=>{
+      r.board.forEach(s=>add('board-'+r.route+'-'+s, ctbUrl(STOPS[s],r.route), r.dir));
+      add('alight-'+prefix+'-'+r.route, ctbUrl(r.alight,r.route), r.dir);
+    });
+  });
+  await Promise.allSettled(jobs);
+  render();
+  const bad = Object.values(E).filter(x=>x.fail).length;
+  $('#livetext').textContent = bad ? `部分資料異常（${bad} 組）` : '即時資料正常 · ' + hkClock().slice(0,5) + ' 更新';
+  if(bad) $('#livedot').className='dot err';
+  $('#refreshBtn').textContent='↻ 更新';
+  loading=false;
+}
+function tick(){
+  $('#hkclock').textContent = hkClock();
+  document.querySelectorAll('.bus[data-eta], .e[data-eta]').forEach(el=>{
+    const m = minsTo(el.dataset.eta);
+    const n = el.querySelector('.n') || el.querySelector('b');
+    if(n){ n.textContent = (m===null?'—':m) + (el.classList.contains('bus')?'':' 分'); n.className = el.classList.contains('bus') ? 'n '+urg(m) : urg(m); }
+  });
+}
+$('#refreshBtn').addEventListener('click',refresh);
+document.querySelectorAll('[data-scope]').forEach(b=>b.addEventListener('click',()=>{
+  scope=b.dataset.scope;
+  document.querySelectorAll('[data-scope]').forEach(x=>x.classList.toggle('on',x.dataset.scope===scope));
+  renderLunch();
+  renderBelcher();
+}));
+renderTimetable();
+render();
+refresh();
+setInterval(tick,1000);
+setInterval(refresh,30000);
+</script>
+</body>
+</html>
